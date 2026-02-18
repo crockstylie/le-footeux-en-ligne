@@ -17,28 +17,23 @@ class GameEngine(
     private val GRID_COLUMNS: Int = 12,
     private val GRID_ROWS: Int = 18
 ) {
-    private val drawPile: MutableList<GameCard> = mutableListOf()
-    private val discardPile: MutableList<GameCard> = mutableListOf()
-
     /**
      * Initializes a new game, creating and shuffling a fresh deck.
      *
      * @return The initial [GameState] ready for the first kick-off.
      */
     fun initializeNewGame(): GameState {
-        drawPile.clear()
-        drawPile.addAll(DeckFactory.createDeck().shuffled())
-        discardPile.clear()
-
-        val player1Hand = (1..8).mapNotNull { drawPile.takeFirst() }
-        val player2Hand = (1..8).mapNotNull { drawPile.takeFirst() }
+        val deck = DeckFactory.createDeck().shuffled()
+        val player1Hand = deck.take(8)
+        val player2Hand = deck.drop(8).take(8)
+        val drawPile = deck.drop(16)
 
         return GameState(
             gamePhase = GamePhase.AWAITING_KICKOFF,
             currentPlayerId = "Player 1",
             playerHands = mapOf("Player 1" to player1Hand, "Player 2" to player2Hand),
-            drawPile = drawPile.toList(),
-            discardPile = discardPile.toList(),
+            drawPile = drawPile,
+            discardPile = emptyList(),
             message = "Player 1 to kick-off."
         )
     }
@@ -67,22 +62,24 @@ class GameEngine(
             newBallPosition = applyMove(newBallPosition, it, playerId)
         }
 
-        val newHand = playerHand.filterNot { it.id == cardToPlay.id }
-        discardPile.add(cardToPlay)
+        val newHand = playerHand - cardToPlay
+        val newDiscardPile = currentState.discardPile + cardToPlay
 
-        val cardDrawn = drawPile.takeFirst()
+        val (newDrawPile, cardDrawn) = currentState.drawPile.let { it.drop(1) to it.firstOrNull() }
         val finalHand = if (cardDrawn != null) newHand + cardDrawn else newHand
 
         // TODO: Check for goals, out of bounds, etc. to change GamePhase
 
+        val nextPlayerId = if (playerId == "Player 1") "Player 2" else "Player 1"
+
         return currentState.copy(
             ballPosition = newBallPosition,
             playerHands = currentState.playerHands + (playerId to finalHand),
-            drawPile = drawPile.toList(),
-            discardPile = discardPile.toList(),
-            currentPlayerId = if (playerId == "Player 1") "Player 2" else "Player 1",
+            drawPile = newDrawPile,
+            discardPile = newDiscardPile,
+            currentPlayerId = nextPlayerId,
             gamePhase = GamePhase.PLAYER_TURN,
-            message = "Player ${if (playerId == "Player 1") "2" else "1"}'s turn."
+            message = "Player $nextPlayerId's turn."
         )
     }
 
@@ -108,8 +105,6 @@ class GameEngine(
         return (currentPos.first + dx).coerceIn(0, GRID_COLUMNS - 1) to
                (currentPos.second + dy).coerceIn(0, GRID_ROWS - 1)
     }
-
-    private fun <T> MutableList<T>.takeFirst(): T? = if (isNotEmpty()) removeAt(0) else null
 
     private data class ValidationResult(val isValid: Boolean, val errorMessage: String? = null)
 }

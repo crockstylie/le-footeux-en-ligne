@@ -24,7 +24,7 @@ fun GameScreen(gameViewModel: GameViewModel = viewModel()) {
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
 
-    val currentPlayerHand = gameState.playerHands["Player 1"] ?: emptyList()
+    val currentPlayerHand = gameState.playerHands[gameState.currentPlayerId] ?: emptyList()
     val drawPileSize = gameState.drawPile.size
 
     LaunchedEffect(gameState.message) {
