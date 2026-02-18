@@ -3,13 +3,17 @@ package fr.antoinehory.lefooteuxenligne.ui.game
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import fr.antoinehory.lefooteuxenligne.ui.game.components.DrawPileDisplay
 import fr.antoinehory.lefooteuxenligne.ui.game.components.FinalGameCard
@@ -37,13 +41,18 @@ fun GameScreen(gameViewModel: GameViewModel = viewModel()) {
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
+        topBar = {
+            Box(modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
+                SnackbarHost(hostState = snackbarHostState, modifier = Modifier.align(Alignment.Center))
+            }
+        }
     ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
+            Scoreboard(score = gameState.score)
             FootballField(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -55,14 +64,13 @@ fun GameScreen(gameViewModel: GameViewModel = viewModel()) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(160.dp)
                     .padding(8.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 LazyRow(
                     modifier = Modifier.weight(1f),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp), // Reduced spacing
                     contentPadding = PaddingValues(horizontal = 4.dp)
                 ) {
                     items(currentPlayerHand) { card ->
@@ -78,5 +86,28 @@ fun GameScreen(gameViewModel: GameViewModel = viewModel()) {
                 DrawPileDisplay(cardsInPile = drawPileSize)
             }
         }
+    }
+}
+
+@Composable
+private fun Scoreboard(score: Map<String, Int>) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp, horizontal = 16.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        val player1Score = score["Player 1"] ?: 0
+        val player2Score = score["Player 2"] ?: 0
+
+        Text(text = "Player 1", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+        Text(
+            text = "$player1Score - $player2Score",
+            fontSize = 20.sp,
+            fontWeight = FontWeight.ExtraBold,
+            modifier = Modifier.padding(horizontal = 16.dp)
+        )
+        Text(text = "Player 2", fontSize = 16.sp, fontWeight = FontWeight.Bold)
     }
 }

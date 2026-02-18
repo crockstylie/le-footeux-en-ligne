@@ -7,7 +7,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -51,12 +50,13 @@ import fr.antoinehory.lefooteuxenligne.domain.model.enums.Direction
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
+import kotlin.math.sqrt
 
 @Composable
 fun FinalGameCard(card: GameCard, modifier: Modifier = Modifier, onClick: () -> Unit = {}) {
     Card(
         modifier = modifier
-            .size(width = 100.dp, height = 150.dp)
+            .size(width = 60.dp, height = 110.dp) // Drastically reduced width
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(8.dp),
         border = BorderStroke(1.dp, Color.Black),
@@ -69,9 +69,10 @@ fun FinalGameCard(card: GameCard, modifier: Modifier = Modifier, onClick: () -> 
                     .fillMaxWidth()
                     .weight(1f)
                     .background(Color(0xFFE8F5E9))
+                    .padding(4.dp) // Reduced padding
             ) {
                 if (card.symbol != CardSymbol.NONE) {
-                    SymbolIcon(symbol = card.symbol, modifier = Modifier.align(Alignment.TopStart).padding(4.dp))
+                    SymbolIcon(symbol = card.symbol, modifier = Modifier.align(Alignment.TopStart))
                 }
                 ArrowCanvas(actions = card.actions)
             }
@@ -88,11 +89,11 @@ private fun CardHeader(type: CardType) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(20.dp) // Consistent height for the header area
+            .height(18.dp)
             .background(if (headerText != null) Color(0xFFFFD600) else Color.Transparent)
     ) {
         if (headerText != null) {
-            Text(text = headerText, modifier = Modifier.align(Alignment.Center), fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+            Text(text = headerText, modifier = Modifier.align(Alignment.Center), fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.Black)
         }
     }
 }
@@ -106,6 +107,7 @@ private fun ArrowCanvas(actions: List<GameAction>) {
 
 @OptIn(ExperimentalTextApi::class)
 private fun DrawScope.drawPaths(actions: List<GameAction>, textMeasurer: TextMeasurer) {
+    // Start arrows a bit higher to give them more space
     var currentPos = Offset(center.x, size.height * 0.9f)
     actions.forEachIndexed { index, action ->
         when (action) {
@@ -124,32 +126,39 @@ private fun DrawScope.drawPaths(actions: List<GameAction>, textMeasurer: TextMea
 @OptIn(ExperimentalTextApi::class)
 private fun DrawScope.drawArrowPath(start: Offset, move: GameAction.Move, textMeasurer: TextMeasurer, isEndpoint: Boolean): Offset {
     val color = Color(0xFFD32F2F)
-    val stroke = 5.dp.toPx()
+    val strokeWidth = 3.dp.toPx()
     val angle = move.direction.toAngleRadians()
-    val length = size.minDimension * 0.1f * move.distance
+
+    // Refined pseudo-logarithmic scaling for arrow length
+    val baseLength = size.minDimension * 0.15f
+    val scaledLength = size.minDimension * 0.1f * sqrt(move.distance.toFloat())
+    val length = (baseLength + scaledLength).coerceAtMost(size.height * 0.85f)
+
     val end = Offset(start.x + length * cos(angle), start.y + length * sin(angle))
 
-    drawLine(color, start, end, stroke)
+    val arrowPath = Path().apply {
+        moveTo(start.x, start.y)
+        lineTo(end.x, end.y)
+    }
+    drawPath(arrowPath, color, style = Stroke(strokeWidth))
+
     if (isEndpoint) {
-        val headLength = stroke * 1.8f
+        val headLength = strokeWidth * 2.0f
         val headPath = Path().apply {
             moveTo(end.x, end.y)
-            lineTo(end.x - headLength * cos(angle - 0.7f), end.y - headLength * sin(angle - 0.7f))
-            lineTo(end.x - headLength * cos(angle + 0.7f), end.y - headLength * sin(angle + 0.7f))
-            close()
+            lineTo(end.x - headLength * cos(angle - 0.5f), end.y - headLength * sin(angle - 0.5f))
+            moveTo(end.x, end.y)
+            lineTo(end.x - headLength * cos(angle + 0.5f), end.y - headLength * sin(angle + 0.5f))
         }
-        drawPath(headPath, color)
+        drawPath(headPath, color, style = Stroke(strokeWidth))
     }
 
     val textLayoutResult: TextLayoutResult = textMeasurer.measure(
         text = AnnotatedString(move.distance.toString()),
-        style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        // Black color and larger font for high contrast and readability
+        style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.Black)
     )
     val textCenter = Offset((start.x + end.x) / 2, (start.y + end.y) / 2)
-    val textRadius = textLayoutResult.size.height * 0.8f + 2.dp.toPx()
-
-    drawCircle(Color.White, textRadius, textCenter)
-    drawCircle(Color.Black, textRadius, textCenter, style = Stroke(1.dp.toPx()))
     drawText(textLayoutResult, topLeft = Offset(textCenter.x - textLayoutResult.size.width / 2, textCenter.y - textLayoutResult.size.height / 2))
 
     return end
@@ -166,10 +175,10 @@ private fun SymbolIcon(symbol: CardSymbol, modifier: Modifier = Modifier) {
         CardSymbol.NONE -> return
     }
     Box(
-        modifier = modifier.size(22.dp).clip(RoundedCornerShape(4.dp)).background(Color.White).border(1.dp, Color.Black, RoundedCornerShape(4.dp)),
+        modifier = modifier.size(18.dp).clip(RoundedCornerShape(4.dp)).background(Color.White).border(1.dp, Color.Black, RoundedCornerShape(4.dp)),
         contentAlignment = Alignment.Center
     ) {
-        Icon(imageVector = icon, contentDescription = null, tint = tint, modifier = Modifier.size(14.dp))
+        Icon(imageVector = icon, contentDescription = null, tint = tint, modifier = Modifier.size(11.dp))
     }
 }
 
